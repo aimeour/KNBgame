@@ -1,0 +1,653 @@
+from tkinter import * #стандартная библиотека tkinter
+from tkinter import scrolledtext #для текстового поля с прокруткой
+from tkinter import filedialog #для создания файла
+from datetime import datetime #вывод текущих даты и времени
+from datetime import date #вывод текущей даты
+import sqlite3 #для работы с бд
+import random #для рандомного выбора действия роботом
+import re #для создания регулярного выражения для проверки верности введенных данных
+
+#начальное окно
+main = Tk()
+main.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+main.title("Камень, ножницы, бумага") #создание заголовка окна
+#окно входа 
+entrance = Toplevel()
+entrance.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+entrance.title("Вход") #создание заголовка окна
+entrance.withdraw() #скрытие окна
+#окно регистрации
+registration = Toplevel()
+registration.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+registration.title("Регистрация") #создание заголовка окна
+registration.withdraw() #скрытие окна
+#окно игры
+play = Toplevel()
+play.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+play.title("Камень, ножницы, бумага") #создание заголовка окна
+play.withdraw() #скрытие окна
+
+#база данных
+bd = sqlite3.connect('server.db') #база данных
+sql = bd.cursor() #курсор (то с помощью чего работаем с бд)
+#создание самой базы данных
+sql.execute("""CREATE TABLE IF NOT EXISTS users(
+            login TEXT,
+            password TEXT,
+            mail TEXT,
+            age INT,
+            gender TEXT,
+            games INT,
+            wins INT,
+            score INT
+)""")
+bd.commit() #поддтверждение создания базы данных
+
+#цвета
+white = '#ffffff'
+beige = '#7a756a'
+robMS = 'RobotoMS'
+
+#картинки 
+#для кнопок действий
+stoneim = PhotoImage(file = 'камень.png') 
+scissorsim = PhotoImage(file = 'ножницы.png')
+paperim = PhotoImage(file = 'бумага.png')
+#для вывода совершенных действий
+stonesmolim = PhotoImage(file = 'камень смол.png')
+scissorssmolim = PhotoImage(file = 'ножницы смол.png')
+papersmolim = PhotoImage(file = 'бумага смол.png')
+#для выхода из аккаунта
+exitaccim = PhotoImage(file = 'выход из аккаунта.png')
+
+def startofthegamef(): #работа со стартовым окном
+    #фон
+    main.im = PhotoImage(file = 'фон.png') #сохранение изображения
+    backgmain = Label(main, image = main.im) #создание поля с ним 
+    backgmain.place(relx = 0, rely = 0) #установка фона
+    startbut = Button (main, text = "Играть", width = 32, height = 2, bg = white, fg = beige, font = robMS) #кнопка старта
+    exitt = Button (main, text = "Выйти", width = 32, height = 2, bg = beige, fg = white, font = robMS) #кнопка выхода из приложения
+    startbut.place(relx=0.5, rely=0.5, anchor = CENTER)
+    exitt.place(relx=0.5, rely=0.6, anchor = CENTER)
+    startbut.bind('<Button-1>', entrancef) #начало, переход на вход
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии на кнопку выхода (главный экран) (предупреждение)
+
+def entrancef(event): #компановка окна входа
+    global logentr, passwordentr
+    global warnacexstentr
+    #фон
+    main.withdraw() #скрытие окна
+    registration.withdraw() #скрытие окна
+    play.withdraw() #скрытие окна
+    entrance.deiconify() #возвращение видимости окна
+    entrance.im1 = PhotoImage(file = 'фон1.png') #сохранение изображения
+    backg = Label(entrance, image = entrance.im1) #создание поля с ним 
+    backg.place(relx = 0, rely = 0) #установка фона
+    Label(entrance, text = "Вход", fg = white, bg = beige, font = 'RobotoMS 24 bold').place(relx = 0.5, rely = 0.2, anchor = CENTER) #подпись "вход"
+    #логин
+    Label(entrance, text = "Логин:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.32, anchor = CENTER) #подпись "логин"
+    logentr = Entry(entrance, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода логина
+    logentr.place(relx = 0.58, rely = 0.32, anchor = CENTER)
+    #пароль
+    Label(entrance, text = "Пароль:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.4, anchor = CENTER) #подпись "пароль"
+    passwordentr = Entry(entrance, font = 'RobotoMS 16 bold', width = 24, justify = LEFT, fg = beige, selectbackground = beige, show = '♡') #создание поля для ввода пароля
+    passwordentr.place(relx = 0.58, rely = 0.4, anchor = CENTER)
+    #кнопки
+    #"Войти"
+    entrytry = Button(entrance, text = "Войти", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка входа
+    entrytry.place(relx = 0.66, rely = 0.5, anchor = CENTER)
+    entrytry.bind('<Button-1>', checkentr) #войти (проверка верности введенных данных)
+    #перейти на регистрацию
+    reg = Button(entrance, text = "Регистрация", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка перехода на окно регистрации
+    reg.place(relx = 0.38, rely = 0.5, anchor = CENTER)
+    reg.bind('<Button-1>', registrationf) #перейти на окно регистрации
+    #кнопка выхода
+    exitt = Button(entrance, text = "Выйти", width = 8, height = 1, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.88, rely = 0.88, anchor = CENTER)
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии переход на кнопку выхода (предупреждение)
+    #типы ошибок для понимания пользователем 
+    warnacexstentr = Label(entrance, text = "! Неверно введены данные !", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    
+def checkentr(event): #проверка данных для входа
+    global logentr, passwordentr, login #логин и пароль
+    global warnacexstentr #ошибка
+    #убираем предыдущие ошибки
+    warnacexstentr.place_forget()
+    #проверки данных на соотвестствия некоторым шаблонам
+    check = 1 #проверка верности ввода данных
+    #логин
+    login = logentr.get() #переменная, содержащая логин
+    #пароль
+    password = passwordentr.get() #переменная, содержащая пароль
+    #проверка по логину
+    #выбираем столбец логина, а оттуда те логины, которые соответствуют введенному 
+    sql.execute(f"SELECT login, password FROM users WHERE login = '{login}' AND password = '{password}'") 
+    #если таких нет, то check = 0 
+    if sql.fetchone() is None:
+        check = 0
+    if check == 0: #если логин не подошел, проверяем почту
+        #выбираем столбец почту, а оттуда те почты, которые соответствуют введенной
+        sql.execute(f"SELECT mail, password FROM users WHERE mail = '{login}' AND password = '{password}'") 
+        #если таких нет, то добавляем check = 0 
+        if sql.fetchone() is None: #если не существует пары логина и пароля в бд выдает ошибку
+            warnacexstentr.place(relx = 0.5, rely = 0.26, anchor = CENTER)
+        else:
+            check = 1
+            #придаем значение логина переменной login
+            for value in sql.execute(f"SELECT login FROM users WHERE mail = '{login}'"): 
+                login = ''.join(value)
+    if check == 1:
+        playf(event)
+
+def registrationf(event): # компановка окна регистрации
+    global logreg, passwordreg, mailreg, agereg, genderreg #данные
+    global warnllen, warnlform, warnplen, warnpform, warnmail, warnacexstreg #вывод ошибок
+    entrance.withdraw() #скрытие окна
+    registration.deiconify() #возвращение видимости окна
+    #фон
+    registration.im1 = PhotoImage(file = 'фон1.png') #сохранение изображения
+    backg = Label(registration, image = registration.im1) #создание поля с ним 
+    backg.place(relx = 0, rely = 0) #установка фона
+    Label(registration, text = "Регистрация", fg = white, bg = beige, font = 'RobotoMS 24 bold').place(relx = 0.5, rely = 0.2, anchor = CENTER) #подпись "вход"
+    #логин 
+    Label(registration, text = "Логин:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.32, anchor = CENTER) #подпись "логин"
+    logreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода логина
+    logreg.place(relx = 0.58, rely = 0.32, anchor = CENTER)
+    #пароль
+    Label(registration, text = "Пароль:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.4, anchor = CENTER) #подпись "пароль"
+    passwordreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода пароля
+    passwordreg.place(relx = 0.58, rely = 0.4, anchor = CENTER)
+    #почта
+    Label(registration, text = "Почта:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.48, anchor = CENTER) #подпись "почта"
+    mailreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода почты
+    mailreg.place(relx = 0.58, rely = 0.48, anchor = CENTER)
+    #возраст
+    Label(registration, text = "Возраст:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.56, anchor = CENTER) #подпись "возраст"
+    agereg = Spinbox(registration, from_ = 7, to = 80, width = 4, fg = beige, font = (robMS, 16), selectbackground = beige) #создание поля для выбора возраста 
+    agereg.place(relx = 0.44, rely = 0.56, anchor = CENTER)
+    #пол
+    Label(registration, text = "Пол:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.52, rely = 0.56, anchor = CENTER) #подпись "пол"
+    genderreg = IntVar(value = 1) #переменная для хранения значения пола
+    Label(registration, text = "жен", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.62, rely = 0.56, anchor = CENTER) #подпись "жен"
+    genderfmreg = Radiobutton(registration, fg = '#000000', bg = beige, value = 1, variable = genderreg) #кнопка выбора женского пола
+    genderfmreg.place(relx = 0.58, rely = 0.56, anchor = CENTER)
+    Label(registration, text = "муж", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.72, rely = 0.56, anchor = CENTER) #подпись "муж"
+    gendermreg = Radiobutton(registration, fg = '#000000', bg = beige, value = 2, variable = genderreg) #кнопка выбора мужского пола
+    gendermreg.place(relx = 0.68, rely = 0.56, anchor = CENTER)
+    #кнопки 
+    #регистрация
+    regtry = Button(registration, text = "Регистрация", width = 16, height = 1, bg = white, fg = beige, font = robMS) #регистрация (проверка верности введенных данных)
+    regtry.place(relx = 0.66, rely = 0.64, anchor = CENTER)
+    regtry.bind('<Button-1>', checkreg) #зарегестрироваться (проверка верности введенных данных)
+    #перейти на вход
+    entry = Button(registration, text = "Войти", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка перехода на окно входа
+    entry.place(relx = 0.38, rely = 0.64, anchor = CENTER)
+    entry.bind('<Button-1>', backentrf) #возврат с окна регистрации на вход
+    #кнопка выхода из приложения
+    exitt = Button(registration, text = "Выйти", width = 8, height = 1, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.88, rely = 0.88, anchor = CENTER)
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии переход на кнопку выхода (предупреждение)
+    #типы ошибок для понимания пользователем
+    warnllen = Label(registration, text = "Логин должен содержать\nот 3 до 12 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warnlform = Label(registration, text = "Неверный формат логина\nБуквы с добавлением цифр", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warnplen = Label(registration, text = "Пароль должен содержать\nот 6 до 20 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warnpform = Label(registration, text = "Неверный формат пароля\nДолжны быть буквы и цифры", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warnmail = Label(registration, text = "Неверный формат почты", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warnacexstreg = Label(registration, text = "! Такой аккаунт уже существует !", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+
+def checkreg(event): #проверка данных для регистрации
+    global logreg, passwordreg, mailreg, agereg, genderreg #данные
+    global warnllen, warnlform, warnplen, warnpform, warnmail, warnacexstreg #вывод ошибок
+    #убираем предыдущие ошибки
+    warnllen.place_forget()
+    warnlform.place_forget()
+    warnplen.place_forget()
+    warnpform.place_forget()
+    warnmail.place_forget()
+    warnacexstreg.place_forget()
+    #проверки данных на соотвестствия некоторым шаблонам
+    checkin = 1 #проверка верности ввода данных
+    #логин
+    login = logreg.get() #переменная, содержащая логин
+    #проверка соответствия введенного логина нужному формату
+    if (login.isalnum() == 1 and login.isdigit() == 0) == 0: 
+        checkin = 0
+        warnlform.place(relx = 0.88, rely = 0.32, anchor = CENTER)
+    if len(login)<3 or len(login)>12: #проверка длинны логина
+        warnlform.place_forget()
+        checkin = 0
+        warnllen.place(relx = 0.87, rely = 0.32, anchor = CENTER)
+    #пароль
+    password = passwordreg.get() #переменная, содержащая пароль
+    #проверка соответствия введенного пароля нужному формату
+    if password.isalnum() == 0 or password.isdigit() == 1 or password.isalpha() == 1:
+        checkin = 0
+        warnpform.place(relx = 0.88, rely = 0.4, anchor = CENTER)
+    if len(password)<6 or len(password)>20: #проверка длинны пароля
+        warnpform.place_forget()
+        checkin = 0
+        warnplen.place(relx = 0.88, rely = 0.4, anchor = CENTER)
+    #почта
+    alf = "abcdefghigklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ@.0123456789" #допустимые для почты символы
+    mail = mailreg.get()
+    mailcheck = 1
+    for i in range(len(mail)): #проверка того все ли символы допустимы
+        if mail[i] in alf == 0: #если символ не входит в алфавит, выводит ощибку ввода и останавливается
+            checkin = 0
+            mailcheck = 0 #чтобы не проверять подходит ли по шаблону после этого
+            warnmail.place(relx = 0.87, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+            break 
+    if mailcheck == 1: #если символы подходят
+        try:
+            pat = re.compile(r"(\w+@\w+\.\w+)") #сбока регулярного выражения 
+            if mail != re.fullmatch(pat, mail).group(): #если не совпадает найденная часть и исходные данные
+                checkin = 0
+                warnmail.place(relx = 0.87, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+            else:
+                try:
+                    list = mail.split("@") #список с частями почты (перед @ и после)
+                    list2 = list[1].split(".") #список с разделенной второй частью
+                    list[1] = list2[0] #объединение списков
+                    list.append(list2[1])
+                    #если какая-то из частей слишком большая или маленькая
+                    if (len(list[0])<3 or len(list[0])>20) or (len(list[1])<3 or len(list[1])>10) or (len(list[2])<2 or len(list[2])>4):
+                        checkin = 0
+                        warnmail.place(relx = 0.87, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+                except IndexError:
+                    checkin = 0
+                    warnmail.place(relx = 0.87, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+        except AttributeError: #если не подходит (тип None)
+            checkin = 0
+            warnmail.place(relx = 0.87, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+    #возраст 
+    age = agereg.get()
+    #пол
+    if genderreg.get() == 1:
+        gender = 'жен'
+    if genderreg.get() == 2:
+        gender = 'муж'
+    #проверка что такие данные еще не внесены в бд
+    if checkin == 1:
+        #выбираем столбец логина, а оттуда те логины, которые соответствуют введенному 
+        sql.execute(f"SELECT login FROM users WHERE login = '{login}'") 
+        #если таких нет, то добавляем данные 
+        if sql.fetchone() is None:
+            #выбираем столбец логина, а оттуда те логины, которые соответствуют введенному 
+            sql.execute(f"SELECT mail FROM users WHERE mail = '{mail}'") 
+            #если таких нет, то добавляем данные 
+            if sql.fetchone() is None:
+                sql.execute("INSERT INTO users VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (login, password, mail, age, gender, 0, 0, 0))
+                bd.commit() #подтверждение действия
+            else:
+                warnacexstreg.place(relx = 0.5, rely = 0.26, anchor = CENTER)
+                checkin = 0
+        else:
+            warnacexstreg.place(relx = 0.5, rely = 0.26, anchor = CENTER)
+            checkin = 0
+    if checkin == 1:
+        entrancef(event)  
+
+def backentrf(event): #возвращение на окно входа из окна регистрации
+    entrancef(event)
+
+def playf(event): #компановка окна игры 
+    global login
+    global res, robotd, wincount, wincountlbl, gamecount, gamecountlbl, stonecountl, scissorscountl, papercountl #счетчики
+    global playerstndp, playerscisdp, playerpprdp, robotstndp, robotscisdp, robotpprdp #вывод совершенных действий
+    robotd = 0 #дейстие робота 
+    wincount = 0 #очки игрока (кол-во побед)
+    gamecount = 0 #счетчик игр
+    stonecountl = 0 #счетчик камней, логика
+    scissorscountl = 0 #счетчик ножниц, логика
+    papercountl = 0 #счетчик бумаги, логика
+    entrance.withdraw() #скрытие окна
+    play.deiconify() #возвращение видимости окна
+    #фон
+    play.im1 = PhotoImage(file = 'фон1.png') #сохранение изображения
+    backg = Label(play, image = play.im1) #создание поля с ним 
+    backg.place(relx = 0, rely = 0) #установка фона
+    Label(play, text="Выберите действие", fg = white, bg = beige, font = 'RobotoMS 24 bold').place(relx = 0.5, rely = 0.12, anchor = CENTER)
+    #результат
+    res = Label(play, text = 'Начинайте!!', fg = white, bg = beige, font = (robMS, 16)) #результат (далее ничья/победа/проигрыш)
+    res.place(relx = 0.5, rely = 0.2, anchor = CENTER)
+    #игрок
+    #аккаунт
+    Label(play, text = login + '  ', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.94, rely = 0.06, anchor = E)
+    exitacc = Button(play, image = exitaccim, border = 0) #создание кнопки выхода из аккаунта с изображением
+    exitacc.place(relx = 0.96, rely = 0.058, anchor = CENTER) #ножницы
+    exitacc.bind('<Button-1>', areyousureexitf) #предупреждающее окно
+    #для вывода счета
+    Label(play, text = '   Счет:     ', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.9, rely = 0.11, anchor = CENTER) 
+    wincountlbl = Label(play, text ='0', fg = white, bg = beige, font = (robMS, 16)) #счет
+    wincountlbl.place(relx = 0.98, rely = 0.11, anchor = E)
+    #количество игр
+    Label(play, text = '    Игр:     ', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.9, rely = 0.16, anchor = CENTER) 
+    gamecountlbl = Label(play, text = '0', fg = white, bg = beige, font = (robMS, 16)) #количество игр
+    gamecountlbl.place(relx = 0.98, rely = 0.16, anchor = E)
+    #для вывод действия (картинкой)
+    Label(play, text = 'Вы:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.05, rely = 0.3, anchor = CENTER) 
+    #вывод совершенных действий (d - do (действие), p - print (вывод))
+    playerstndp = Label(play, image = stonesmolim)
+    playerscisdp = Label(play, image = scissorssmolim)
+    playerpprdp = Label(play, image = papersmolim) 
+    #робот
+    #для вывода действия (картинкой)
+    Label(play, text = 'Робот:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.55, rely = 0.3, anchor = CENTER) 
+    #вывод совершенных действий (d - do (действие), p - print (вывод))
+    robotstndp = Label(play, image = stonesmolim)
+    robotscisdp = Label(play, image = scissorssmolim)
+    robotpprdp = Label(play, image = papersmolim)
+    #кнопки камень, ножницы, бумага
+    #камень
+    stonebut = Button(play, image = stoneim, border = 0) #создание кнопки с изображением
+    stonebut.place(relx = 0.26, rely = 0.52, anchor = CENTER) #камень
+    stonebut.bind('<Button-1>', stonef) #выбор камня
+    #ножницы
+    scissorsbut = Button(play, image = scissorsim, border = 0) #создание кнопки с изображением
+    scissorsbut.place(relx = 0.5, rely = 0.52, anchor = CENTER) #ножницы
+    scissorsbut.bind('<Button-1>', scissorsf) #выбор ножниц
+    #бумага
+    paperbut = Button(play, image = paperim, border = 0) #создание кнопки с изображением
+    paperbut.place(relx = 0.72, rely = 0.52, anchor = CENTER) #бумага
+    paperbut.bind('<Button-1>', paperf) #выбор бумаги
+    #кнопки
+    #повтор
+    restart = Button(play, text = "Заново", width = 8, height = 1, bg = white, fg = beige, font = robMS) #кнопка запуска игры сначала
+    restart.place(relx = 0.12, rely = 0.9, anchor = CENTER)
+    restart.bind('<Button-1>', playf)
+    #сохранение
+    save = Button(play, text = "Сохранить", width = 12, height = 1, bg = white, fg = beige, font = robMS) #кнопка сохранения результата
+    save.place(relx = 0.28, rely = 0.9, anchor = CENTER)
+    save.bind('<Button-1>', savef)
+    #статистика
+    statisticsbut = Button(play, text = "Статистика", width = 12, height = 1, bg = white, fg = beige, font = robMS) #кнопка вывода статистики
+    statisticsbut.place(relx = 0.47, rely = 0.9, anchor = CENTER)
+    statisticsbut.bind('<Button-1>', statisticsf)
+    #кнопка выхода
+    exitt = Button(play, text = "Выйти", width = 8, height = 1, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.88, rely = 0.9, anchor = CENTER)
+    exitt.bind('<Button-1>', areyousureclosef)
+
+def robotf(): #выбор действия робота и его вывод
+    global login
+    global robotd, gamecount, gamecountlbl, stonecountl, scissorscountl, papercountl #счетчики
+    global robotstndp, robotscisdp, robotpprdp #вывод совершенных действий
+    gamecount += 1 #счетчик игр для сеанса
+    gamecountlbl['text'] = gamecount
+    for value in sql.execute(f"SELECT games FROM users WHERE login = '{login}'"):
+        games = int(value[0]) + 1 #общий счетчик игр
+    sql.execute(f"UPDATE users SET games = {games} WHERE login = '{login}'") #обновление значения игр в бд
+    bd.commit() #подтверждение действия
+    if stonecountl<3 and scissorscountl<3 and papercountl<3:
+        robotd = random.randint(1,3) #даем компьютеру рандомное действие
+        '''1 - камень, 2 - ножницы, 3 - бумага'''
+    else: #если игрок слишком часто выбирает одинаковые варианты
+        if stonecountl >= 3:
+            robotd = 3
+            stonecountl -= 2
+            scissorscountl -= 1
+            papercountl -= 1
+        if scissorscountl >= 3:
+            robotd = 1
+            scissorscountl -= 2
+            stonecountl -= 1
+            papercountl -= 1
+        if papercountl >= 3:
+            robotd = 2
+            papercountl -= 2
+            stonecountl -= 1
+            scissorscountl -= 1
+    if robotd == 1: #камень
+        if robotscisdp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotscisdp.place_forget()
+        if robotpprdp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotpprdp.place_forget()
+        robotstndp.place(relx=0.65, rely=0.29, anchor = CENTER) #добавляем картинку действия
+    if robotd == 2: #ножницы
+        if robotstndp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotstndp.place_forget()
+        if robotpprdp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotpprdp.place_forget()
+        robotscisdp.place(relx=0.65, rely=0.29, anchor = CENTER) #добавляем картинку действия
+    if robotd == 3: #бумага
+        if robotstndp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotstndp.place_forget()
+        if robotscisdp.winfo_exists() == 1: #удаляем предыдущую картинку
+            robotscisdp.place_forget()
+        robotpprdp.place(relx=0.65, rely=0.29, anchor = CENTER) #добавляем картинку действия
+
+def stonef(event): #ход камнем
+    global login, wins #для бд
+    global res, robotd, wincount, wincountlbl, stonecountl #счетчики
+    global playerstndp, playerscisdp, playerpprdp #вывод совершенных действий
+    stonecountl += 1
+    if playerscisdp.winfo_exists() ==1: #удаляем предыдущую картинку
+        playerscisdp.place_forget()
+    if playerpprdp.winfo_exists() ==1: #удаляем предыдущую картинку
+        playerpprdp.place_forget()
+    playerstndp.place(relx=0.15, rely=0.29, anchor = CENTER) #добавляем картинку действия
+    robotf()
+    if robotd == 1: #камень
+        res['text'] = 'Ничья'
+    if robotd == 2: #ножницы
+        res['text'] = 'Победа'
+        wincount += 1
+        for value in sql.execute(f"SELECT wins FROM users WHERE login = '{login}'"):
+            wins = int(value[0]) + 1 #обновление общего количества побед
+            sql.execute(f"UPDATE users SET wins = {wins} WHERE login = '{login}'") #обновление значения побед в бд 
+    if robotd == 3: #бумага
+        res['text'] = 'Проигрыш'
+    wincountlbl['text'] = wincount
+    for value in sql.execute(f"SELECT games, wins FROM users WHERE login = '{login}'"):
+        score = int(float(value[1])/value[0]*100) #подсчет счета (процент побед)
+    sql.execute(f"UPDATE users SET score = {score} WHERE login = '{login}'") #обновление счета
+    bd.commit() #подтверждение действия
+
+def scissorsf(event): #ход ножницами
+    global login #для бд
+    global res, robotd, wincount, wincountlbl, gamecount, scissorscountl #счетчики
+    global playerstndp, playerscisdp, playerpprdp #вывод совершенных действий
+    scissorscountl += 1
+    if playerstndp.winfo_exists() == 1: #удаляем предыдущую картинку
+        playerstndp.place_forget()
+    if playerpprdp.winfo_exists() == 1: #удаляем предыдущую картинку
+        playerpprdp.place_forget()
+    playerscisdp.place(relx=0.15, rely=0.29, anchor = CENTER) #добавляем картинку действия
+    robotf()
+    if robotd == 1: #камень
+        res['text'] = 'Проигрыш'
+    if robotd == 2: #ножницы
+        res['text'] = 'Ничья'
+    if robotd == 3: #бумага
+        res['text'] = 'Победа'
+        wincount += 1
+        for value in sql.execute(f"SELECT wins FROM users WHERE login = '{login}'"):
+            wins = int(value[0]) + 1 #обновление общего количества побед
+            sql.execute(f"UPDATE users SET wins = {wins} WHERE login = '{login}'") #обновление значения побед в бд 
+    wincountlbl['text'] = wincount
+    for value in sql.execute(f"SELECT games, wins FROM users WHERE login = '{login}'"):
+        score = int(float(value[1])/value[0]*100) #подсчет счета (процент побед)
+    sql.execute(f"UPDATE users SET score = {score} WHERE login = '{login}'") #обновление счета
+    bd.commit() #подтверждение действия
+
+def paperf(event): #ход бумагой
+    global login #для бд
+    global res, robotd, wincount, wincountlbl, gamecount, papercountl #счетчики
+    global playerstndp, playerscisdp, playerpprdp #вывод совершенных действий
+    papercountl += 1
+    if playerstndp.winfo_exists() ==1: #удаляем предыдущую картинку
+        playerstndp.place_forget()
+    if playerscisdp.winfo_exists() ==1: #удаляем предыдущую картинку
+        playerscisdp.place_forget()
+    playerpprdp.place(relx=0.15, rely=0.29, anchor = CENTER) #добавляем картинку действия
+    robotf()
+    if robotd == 1: #камень
+        res['text'] = 'Победа'
+        wincount += 1
+        for value in sql.execute(f"SELECT wins FROM users WHERE login = '{login}'"):
+            wins = int(value[0]) + 1 #обновление общего количества побед
+            sql.execute(f"UPDATE users SET wins = {wins} WHERE login = '{login}'") #обновление значения побед в бд 
+    if robotd == 2: #ножницы
+        res['text'] = 'Проигрыш'
+    if robotd == 3: #бумага
+        res['text'] = 'Ничья'
+    wincountlbl['text'] = wincount
+    for value in sql.execute(f"SELECT games, wins FROM users WHERE login = '{login}'"):
+        score = int(float(value[1])/value[0]*100) #подсчет счета (процент побед)
+    sql.execute(f"UPDATE users SET score = {score} WHERE login = '{login}'") #обновление счета
+    bd.commit() #подтверждение действия
+
+def areyousuref(): #основа предупреждений 
+    global sure 
+    #окно предупреждения преед выходом
+    sure = Toplevel()
+    sure.attributes("-topmost",True) #окно будет сверху
+    sure.geometry("280x200+%d+%d" %(main.winfo_screenwidth()/2-140, main.winfo_screenheight()/2-100)) #установка размеров окна и его расположения
+    sure.title("") #создание заголовка окна
+    sure.configure(bg = '#7a756a')
+    #кнопки
+    Label(sure, text = 'Вы уверены,\nчто хотите выйти?', bg = beige, fg = white, font = (robMS, 16)).place(relx=0.5, rely=0.3, anchor = CENTER)
+    no = Button(sure, text = 'Нет', bg = white, fg = beige, font = (robMS, 16), width = 8) #кнопка "Нет"
+    no.place(relx = 0.72, rely = 0.62, anchor = CENTER)
+    no.bind('<Button-1>', delwarnf) #пользователь выбрал не выходить из игры
+
+def areyousureclosef(event): #предупреждение перед выходом из игры
+    areyousuref()
+    yes = Button(sure, text = 'Да', bg = white, fg = beige, font = (robMS, 16), width = 8) #кнопка "Да"
+    yes.place(relx = 0.28, rely = 0.62, anchor = CENTER)
+    yes.bind('<Button-1>', endf) #пользователь выбрал выйти из игры
+
+def areyousureexitf(event): #предупреждение перед выходом из аккаунта
+    areyousuref()
+    yes = Button(sure, text = 'Да', bg = white, fg = beige, font = (robMS, 16), width = 8) #кнопка "Да"
+    yes.place(relx = 0.28, rely = 0.62, anchor = CENTER)
+    yes.bind('<Button-1>', yesexitf) #пользователь выбрал выйти из аккаунта
+
+def yesexitf(event): #если пользователь решил переиграть
+    sure.withdraw()
+    entrancef(event)
+
+def delwarnf(event): #удаление всплывающего окна
+    sure.withdraw()
+
+def endf(event): #уничтожение всех окон
+    main.destroy()
+
+def savef(event): #сохранение данных
+    global login, gamecount, wincount
+    nowd = date.today() #дата 
+    now = datetime.now() #дата и время
+    nowt = now.strftime("%H:%M:%S") #красивый формат времени
+    name = now.strftime("%H-%M %d-%m-%Y") #полная дата в простом формате для имени файла
+    name += '.txt' #добавление раширения
+    file_path = filedialog.asksaveasfilename(filetypes=(("Text files", "*.txt"), ("All files", "*.*")), defaultextension='.txt', initialfile = name) #способ и тип сохранения результата
+    if file_path: 
+        with open(file_path, "w") as file: #запись в файл
+            file.write(f"Статистика игры {login} за {nowd} {nowt}\n") 
+            file.write(f"Текущая игра\n")
+            file.write(f"Количество игр: {gamecount}\n") 
+            file.write(f"Количество побед: {wincount}\n") 
+            file.write(f"Общая статистика\n")
+            for value in sql.execute(f"SELECT games FROM users WHERE login = '{login}'"):
+                games = int(value[0]) #получение количества игр пользователя
+            file.write(f"Общее количество игр: {games}\n")
+            for value in sql.execute(f"SELECT wins FROM users WHERE login = '{login}'"):
+                wins = int(value[0]) #получение количества побед пользователя 
+            file.write(f"Общее количество побед: {wins}\n") 
+            for value in sql.execute(f"SELECT score FROM users WHERE login = '{login}'"):
+                score = int(value[0]) #получение счета пользователя
+            file.write(f"Счет: {score}\n")
+            i = 1
+            for log in sql.execute("SELECT login FROM users ORDER BY score DESC"): #определение номера в рейтинге
+                if "".join(log) == login:
+                    break   
+                i += 1 #шаг
+            file.write(f"Место в рейтинге: {i}\n")
+
+def statisticsf(event):
+    global login
+    global statistics
+    #окно статистики преед выходом
+    statistics = Toplevel()
+    statistics.attributes("-topmost",True) #окно будет сверху
+    statistics.geometry("360x320+%d+%d" %(main.winfo_screenwidth()/2-main.winfo_screenwidth()/2.1, statistics.winfo_screenheight()/2-100)) #установка размеров окна и его расположения
+    statistics.title("Статистика") #создание заголовка окна
+    statistics.configure(bg = '#7a756a')
+    #логин
+    Label(statistics, text = login, fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.02, rely = 0.02, anchor = NW)
+    #почта
+    Label(statistics, text = 'Почта:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.02, rely = 0.18, anchor = W)
+    for value in sql.execute(f"SELECT mail FROM users WHERE login = '{login}'"):
+        mail = "".join(value) #получение почты пользователя
+    Label(statistics, text = mail, fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.22, rely = 0.18, anchor = W)
+    #общая статистика игрока
+    #игры
+    Label(statistics, text = 'Игр:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.02, rely = 0.27, anchor = W)
+    for value in sql.execute(f"SELECT games FROM users WHERE login = '{login}'"):
+        games = int(value[0]) #получение количества игр пользователя
+    Label(statistics, text = games, fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.16, rely = 0.27, anchor = W)
+    #победы
+    Label(statistics, text = 'Побед:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.27, anchor = W)
+    for value in sql.execute(f"SELECT wins FROM users WHERE login = '{login}'"):
+        wins = int(value[0]) #получение количества побед пользователя
+    Label(statistics, text = wins, fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.54, rely = 0.27, anchor = W)
+    #счет
+    Label(statistics, text = 'Счет:', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.64, rely = 0.27, anchor = W)
+    for value in sql.execute(f"SELECT score FROM users WHERE login = '{login}'"):
+        score = int(value[0]) #получение счета пользователя
+    Label(statistics, text = score, fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.82, rely = 0.27, anchor = W)
+    #топ сервера
+    Label(statistics, text = 'Топ игроков', fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.02, rely = 0.38, anchor = W)
+    Label(statistics, text = 'Логин                        Игры   Победы  Счет', fg = white, bg = beige, font = (robMS, 12)).place(relx = 0.02, rely = 0.46, anchor = W)
+    top = scrolledtext.ScrolledText(statistics, width = 26, height = 5) #текстовое поле с прокурткой
+    top.configure(fg = white, bg = '#918d83', font = (robMS, 16), selectbackground = beige) #украшение поля
+    top.place(relx = 0.5, rely = 0.52, anchor = N)
+    check = 0 #есть ли активный пользователь в топе
+    i = 1 #цикл, чтоб только вывело первых 5 игроков
+    #сортировка в порядке убывания
+    for value in sql.execute("SELECT login, games, wins, score FROM users ORDER BY score DESC"): 
+        if "".join(value[0]) == login: #проверка на сопадения логина
+            check = 1
+        k = 1.5 #коэффициент пробелов для красивого вывода
+        for a in "".join(value[0]): #если есть широкие
+            if 'm' in a or 'w' in a: 
+                k += 0.2
+        for a in "".join(value[0]): #если есть узкие
+            if 'i' in a: 
+                k -= 0.1
+        n = 1
+        if 7-len(str(value[1])) == 1 or 7-len(str(value[2])) == 1:
+            n = 0.5
+        #создание строки со всеми данными каждого пользователя
+        x = str(i) + ". " + "".join(value[0]) + " "*int(20-k*len("".join(value[0]))) + str(value[1]) + " "*int(7-n*len(str(value[1]))) + str(value[2]) + " "*int(7-n*len(str(value[2]))) + str(value[3])
+        top.insert(INSERT, x) #добавление этой строки в виджет
+        top.insert(INSERT, "\n")
+        i+=1 #шаг
+        if i == 6: #остановка после 5 игрока
+            break
+    if check == 0: #если авторизованного пользователя нет в топе
+        top.insert(INSERT, "                •  •  •") #разделение рейтинга (топ 5 . . . пользователь)
+        top.insert(INSERT, "\n")
+        for value in sql.execute(f"SELECT login, games, wins, score FROM users WHERE login = '{login}'"): #сортировка
+            i = 1
+            for log in sql.execute("SELECT login FROM users ORDER BY score DESC"): #определение номера в рейтинге
+                if "".join(log) == login:
+                    break   
+                i += 1 #шаг
+            n = 1
+            if 7-len(str(value[1])) == 1 or 7-len(str(value[2])) == 1:
+                n = 0.5
+            #создание строки со всеми данными пользователя
+            x = str(i) + ". " + "Вы" + " "*16 + str(value[1]) + " "*int(7-n*len(str(value[1]))) + str(value[2]) + " "*int(7-n*len(str(value[2]))) + str(value[3])
+            top.insert(INSERT, x) #добавление этой строки в виджет
+    #кнопка выхода
+    exitt = Button(statistics, text = "Закрыть", width = 8, height = 1, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.98, rely = 0.02, anchor = NE)
+    exitt.bind('<Button-1>', closestatf) #при нажатии переход на кнопку выхода (предупреждение)
+
+def closestatf(event):
+    statistics.withdraw()
+
+startofthegamef() #начало 
+
+main.mainloop()

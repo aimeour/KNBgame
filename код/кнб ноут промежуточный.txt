@@ -1,0 +1,245 @@
+from tkinter import *
+from tkinter import filedialog
+import random
+import re
+
+#начальное окно
+main = Tk()
+main.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+main.title("Камень, ножницы, бумага") #создание заголовка окна
+#окно входа 
+entrance = Toplevel()
+entrance.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+entrance.title("Вход") #создание заголовка окна
+entrance.withdraw() #скрытие окна
+#окно регистрации
+registration = Toplevel()
+registration.geometry("800x600+%d+%d" %(main.winfo_screenwidth()/2-400, main.winfo_screenheight()/2-320)) #установка размеров окна и его расположения
+registration.title("Регистрация") #создание заголовка окна
+registration.withdraw() #скрытие окна
+#окно предупреждения преед выходом
+sure = Toplevel()
+sure.attributes("-topmost",True) #окно будет сверху
+sure.geometry("280x200+%d+%d" %(main.winfo_screenwidth()/2-140, main.winfo_screenheight()/2-100)) #установка размеров окна и его расположения
+sure.title("") #создание заголовка окна
+sure.configure(bg = '#7a756a')
+sure.withdraw() #скрытие окна
+
+#цвета
+white = '#ffffff'
+beige = '#7a756a'
+robMS = 'RobotoMS'
+
+def startofthegamef(): #работа со стартовым окном
+    main.im = PhotoImage(file = 'фон.png') #сохранение изображения
+    backgmain = Label(main, image = main.im) #создание поля с ним 
+    backgmain.place(relx = 0, rely = 0) #установка фона
+    startbut = Button (main, text = "Играть", width = 32, height = 2, bg = white, fg = beige, font = robMS) #кнопка старта
+    exitt = Button (main, text = "Выйти", width = 32, height = 2, bg = beige, fg = white, font = robMS) #кнопка выхода из приложения
+    startbut.place(relx=0.5, rely=0.5, anchor = CENTER)
+    exitt.place(relx=0.5, rely=0.6, anchor = CENTER)
+    startbut.bind('<Button-1>', entrancef) #начало, переход на вход
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии на кнопку выхода (главный экран) (предупреждение)
+
+def entrancef(event): #окно входа
+    global logentr, paswordentr
+    main.withdraw() #скрытие окна
+    registration.withdraw() #скрытие окна
+    entrance.deiconify() #возвращение видимости окна
+    entrance.im1 = PhotoImage(file = 'фон1.png') #сохранение изображения
+    backg = Label(entrance, image = entrance.im1) #создание поля с ним 
+    backg.place(relx = 0, rely = 0) #установка фона
+    Label(entrance, text = "Вход", fg = white, bg = beige, font = 'RobotoMS 24 bold').place(relx = 0.5, rely = 0.2, anchor = CENTER) #подпись "вход"
+    #логин
+    Label(entrance, text = "Логин:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.32, anchor = CENTER) #подпись "логин"
+    logentr = Entry(entrance, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода логина
+    logentr.place(relx = 0.58, rely = 0.32, anchor = CENTER)
+    #пароль
+    Label(entrance, text = "Пароль:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.4, anchor = CENTER) #подпись "пароль"
+    paswordentr = Entry(entrance, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода пароля
+    paswordentr.place(relx = 0.58, rely = 0.4, anchor = CENTER)
+    #кнопки
+    #"Войти"
+    entrytry = Button(entrance, text = "Войти", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка входа
+    entrytry.place(relx = 0.66, rely = 0.5, anchor = CENTER)
+    entrytry.bind('<Button-1>', checkentr) #войти (проверка верности введенных данных)
+    #перейти на регистрацию
+    reg = Button(entrance, text = "Регистрация", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка перехода на окно регистрации
+    reg.place(relx = 0.38, rely = 0.5, anchor = CENTER)
+    reg.bind('<Button-1>', registrationf) #перейти на окно регистрации
+    #кнопка выхода
+    exitt = Button(entrance, text = "Выйти", width = 8, height = 2, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.88, rely = 0.88, anchor = CENTER)
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии переход на кнопку выхода (предупреждение)
+    
+def checkentr(event): #проверка данных для входа
+    global logentr, paswordentr
+    #вывод типа ошибки для понимания пользователем
+    warn1 = Label(entrance, text = "Логин должен содержать\nот 4 до 16 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warn2 = Label(entrance, text = "Пароль должен содержать\nот 6 до 20 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warn3 = Label(entrance, text = "Неверный формат логина", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warn4 = Label(entrance, text = "Неверный формат пароля", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    login = logentr.get() #переменная, содержащая логин
+    pasword = paswordentr.get() #переменная, содержащая пароль
+    checkin = 1 #проверка верности ввода данных
+    #логин
+    #переменная для проверки выведена ли уже ошибка длины, 
+    #чтобы не выводить, что неверно записаны данные поверх
+    lg = 0 
+    if len(login)<4 or len(login)>16: #проверка длинны логина
+        checkin = 0
+        lg = 1 
+        warn1.place(relx = 0.88, rely = 0.32, anchor = CENTER)
+    #проверка соответствия введенного логина нужному формату
+    if (login.isalnum() == 1 and login.isdigit() == 0) == 0: 
+        checkin = 0
+        #если ошибка о длинне уже была выведена, то ошибка соответствия шаблону не будет
+        if lg == 0:
+            warn3.place(relx = 0.88, rely = 0.32, anchor = CENTER)
+    #пароль
+    #переменная для проверки выведена ли уже ошибка длины, 
+    #чтобы не выводить, что неверно записаны данные поверх
+    pw = 0 
+    if len(pasword)<6 or len(pasword)>20: #проверка длинны пароля
+        checkin = 0
+        pw = 1
+        warn2.place(relx = 0.885, rely = 0.4, anchor = CENTER)
+    #проверка соответствия введенного пароля нужному формату
+    if pasword.isalnum() == 0:
+        checkin = 0
+        #если ошибка о длинне уже была выведена, то ошибка соответствия шаблону не будет
+        if pw == 0:
+            warn4.place(relx = 0.88, rely = 0.4, anchor = CENTER)
+    '''if checkin == 1:
+        play(event)'''
+
+def registrationf(event): #окно регистрации
+    global logreg, paswordreg, mailreg, agereg, gender #данные
+    global warnllen, warnlform, warnplen, warnpform, warnmail #вывод ошибок
+    registration.deiconify() #возвращение видимости окна
+    entrance.withdraw() #скрытие окна
+    registration.im1 = PhotoImage(file = 'фон1.png') #сохранение изображения
+    backg = Label(registration, image = registration.im1) #создание поля с ним 
+    backg.place(relx = 0, rely = 0) #установка фона
+    Label(registration, text = "Регистрация", fg = white, bg = beige, font = 'RobotoMS 24 bold').place(relx = 0.5, rely = 0.2, anchor = CENTER) #подпись "вход"
+    #логин
+    Label(registration, text = "Логин:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.32, anchor = CENTER) #подпись "логин"
+    logreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода логина
+    logreg.place(relx = 0.58, rely = 0.32, anchor = CENTER)
+    #пароль
+    Label(registration, text = "Пароль:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.4, anchor = CENTER) #подпись "пароль"
+    paswordreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода пароля
+    paswordreg.place(relx = 0.58, rely = 0.4, anchor = CENTER)
+    #почта
+    Label(registration, text = "Почта:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.48, anchor = CENTER) #подпись "почта"
+    mailreg = Entry(registration, font = (robMS, 16), width = 24, justify = LEFT, fg = beige, selectbackground = beige) #создание поля для ввода почты
+    mailreg.place(relx = 0.58, rely = 0.48, anchor = CENTER)
+    #возраст
+    Label(registration, text = "Возраст:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.32, rely = 0.56, anchor = CENTER) #подпись "возраст"
+    agereg = Spinbox(registration, from_ = 7, to = 80, width = 4, font = (robMS, 16), selectbackground = beige) #создание поля для выбора возраста 
+    agereg.place(relx = 0.44, rely = 0.56, anchor = CENTER)
+    #пол
+    Label(registration, text = "Пол:", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.52, rely = 0.56, anchor = CENTER) #подпись "пол"
+    gender = StringVar(value = "жен") #переменная для хранения значения пола
+    Label(registration, text = "жен", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.62, rely = 0.56, anchor = CENTER) #подпись "жен"
+    genderfmreg = Radiobutton(registration, fg = '#000000', bg = beige, value = "жен", variable = gender) #кнопка выбора женского пола
+    genderfmreg.place(relx = 0.58, rely = 0.56, anchor = CENTER)
+    Label(registration, text = "муж", fg = white, bg = beige, font = (robMS, 16)).place(relx = 0.72, rely = 0.56, anchor = CENTER) #подпись "муж"
+    gendermreg = Radiobutton(registration, fg = '#000000', bg = beige, value = "муж", variable = gender) #кнопка выбора мужского пола
+    gendermreg.place(relx = 0.68, rely = 0.56, anchor = CENTER)
+    #кнопка регистрации
+    regtry = Button(registration, text = "Регистрация", width = 16, height = 1, bg = white, fg = beige, font = robMS) #регистрация (проверка верности введенных данных)
+    regtry.place(relx = 0.66, rely = 0.64, anchor = CENTER)
+    regtry.bind('<Button-1>', checkreg) #зарегестрироваться (проверка верности введенных данных)
+    #типы ошибок для понимания пользователем
+    warnllen = Label(registration, text = "Логин должен содержать\nот 4 до 16 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warnlform = Label(registration, text = "Неверный формат логина", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warnplen = Label(registration, text = "Пароль должен содержать\nот 6 до 20 символов", fg = white, bg = beige, font = (robMS, 10), justify = "left")
+    warnpform = Label(registration, text = "Неверный формат пароля", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    warnmail = Label(registration, text = "Неверный формат почты", fg = white, bg = beige, font = (robMS, 10), justify="left", height = 2)
+    #перейти на вход
+    entry = Button(registration, text = "Войти", width = 16, height = 1, bg = white, fg = beige, font = robMS) #кнопка перехода на окно входа
+    entry.place(relx = 0.38, rely = 0.64, anchor = CENTER)
+    entry.bind('<Button-1>', backentrf) #возврат с окна регистрации на вход
+    #кнопка выхода из приложения
+    exitt = Button(registration, text = "Выйти", width = 8, height = 2, bg = white, fg = beige, font = robMS) #кнопка выхода из приложения
+    exitt.place(relx = 0.88, rely = 0.88, anchor = CENTER)
+    exitt.bind('<Button-1>', areyousureclosef) #при нажатии переход на кнопку выхода (предупреждение)
+
+def checkreg(event): #проверка данных для регистрации
+    global logreg, paswordreg, mailreg, agereg, gender #данные
+    global warnllen, warnlform, warnplen, warnpform, warnmail #вывод ошибок
+    #убираем предыдущие ошибки
+    warnllen.place_forget()
+    warnlform.place_forget()
+    warnplen.place_forget()
+    warnpform.place_forget()
+    warnmail.place_forget()
+    #проверки данных на соотвестствия некоторым шаблонам
+    checkin = 1 #проверка верности ввода данных
+    #логин
+    login = logreg.get() #переменная, содержащая логин
+    #проверка соответствия введенного логина нужному формату
+    if (login.isalnum() == 1 and login.isdigit() == 0) == 0: 
+        checkin = 0
+        warnlform.place(relx = 0.88, rely = 0.32, anchor = CENTER)
+    if len(login)<4 or len(login)>16: #проверка длинны логина
+        warnlform.place_forget()
+        checkin = 0
+        warnllen.place(relx = 0.88, rely = 0.32, anchor = CENTER)
+    #пароль
+    pasword = paswordreg.get() #переменная, содержащая пароль
+    #проверка соответствия введенного пароля нужному формату
+    if pasword.isalnum() == 0 or pasword.isdigit() == 1 or pasword.isalpha() == 1:
+        checkin = 0
+        warnpform.place(relx = 0.88, rely = 0.4, anchor = CENTER)
+    if len(pasword)<6 or len(pasword)>20: #проверка длинны пароля
+        warnpform.place_forget()
+        checkin = 0
+        warnplen.place(relx = 0.885, rely = 0.4, anchor = CENTER)
+    #почта
+    alf = "abcdefghigklmnopqrstuvwxyzABCDEFGHIGKLMNOPQRSTUVWXYZ@.0123456789" #допустимые для почты символы
+    mail = mailreg.get()
+    mailcheck = 1
+    for i in range(len(mail)): #проверка того все ли символы допустимы
+        if mail[i] in alf == 0: #если символ не входит в алфавит, выводит ощибку ввода и останавливается
+            checkin = 0
+            mailcheck = 0 #чтобы не проверять подходит ли по шаблону после этого
+            warnmail.place(relx = 0.88, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+            break 
+    if mailcheck == 1: #если символы подходят
+        try:
+            pat = re.compile(r"(\w+@\w+\.\w+)") #сбока регулярного выражения 
+            if mail != re.fullmatch(pat, mail).group(): #если не совпадает найденная часть и исходные данные
+                checkin = 0
+                warnmail.place(relx = 0.88, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+        except AttributeError: #если не подходит (тип None)
+            checkin = 0
+            warnmail.place(relx = 0.88, rely = 0.48, anchor = CENTER) #вывод ошибки ввода
+    #возраст 
+    age = agereg.get()
+    if checkin == 1:
+        entrancef(event)  
+
+def backentrf(event): #возвращение на окно входа из окна регистрации
+    entrancef(event)
+
+def areyousureclosef(event): #уверен ли игрок, что хочет выйти из игры 
+    sure.deiconify()
+    Label(sure, text = 'Вы уверены,\nчто хотите выйти?', bg = beige, fg = white, font = (robMS, 16)).place(relx=0.5, rely=0.3, anchor = CENTER)
+    yes = Button(sure, text = 'Да', bg = white, fg = beige, font = (robMS, 16), width = 8) #кнопка "Да"
+    no = Button(sure, text = 'Нет', bg = white, fg = beige, font = (robMS, 16), width = 8) #кнопка "Нет"
+    yes.place(relx = 0.28, rely = 0.62, anchor = CENTER)
+    no.place(relx = 0.72, rely = 0.62, anchor = CENTER)
+    yes.bind('<Button-1>', endf) #пользователь выбрал выйти из игры
+    no.bind('<Button-1>', delwarnf) #пользователь выбрал не выходить из игры
+
+def delwarnf(event): #удаление всплывающего окна
+    sure.withdraw() 
+
+def endf(event): #уничтожение всех окон
+    main.destroy()
+
+startofthegamef() #начало 
+
+main.mainloop()
